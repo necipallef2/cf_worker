@@ -1,0 +1,14 @@
+name = "fpjs-metrics-beta"
+type = "javascript"
+account_id = ""
+zone_id = ""
+route = ""
+
+[build.upload]
+format = "modules"
+dir = './combined'
+main = "./index.js"
+
+[[build.upload.rules]]
+type = "ESModule"
+globs = ["**/*.js"]
