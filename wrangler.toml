@@ -6,7 +6,7 @@ route = ""
 
 [build.upload]
 format = "modules"
-dir = './combined'
+dir = './src'
 main = "./index.js"
 
 [[build.upload.rules]]
