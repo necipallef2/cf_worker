@@ -41,7 +41,7 @@ function createErrorResponse(reason) {
   return new Response(JSON.stringify(responseBody), { status: 500 })
 }
 
-async function handleIngressAPIRaw(event, endpoint) {
+async function handleIngressAPIRaw(event, url) {
   if (event == null) {
     throw new Error('event is null');
   }
@@ -50,16 +50,16 @@ async function handleIngressAPIRaw(event, endpoint) {
     throw new Error('request is null');
   }
 
-  if (endpoint == null) {
-    throw new Error('endpoint is null');
+  if (url == null) {
+    throw new Error('url is null');
   }
 
-  const requestHeaders = new Headers(event.request)
-  requestHeaders.set('user-agent', event.request.headers.get('user-agent'))
+  console.log(`sending ingress api to ${url}...`)
+  const requestHeaders = new Headers(event.request.headers)
 
-  const newRequest = new Request(endpoint, new Request(event.request, {
+  const newRequest = new Request(url, new Request(event.request, {
     headers: requestHeaders
-  }))
+  }));
 
   const response = await fetch(newRequest)
   return createResponse(event.request, response)
@@ -135,8 +135,10 @@ async function handleIngressAPI(event){
     const url = new URL(event.request.url);
     const region = url.searchParams.get('region') || 'us';
     const endpoint = getVisitorIdEndpoint(region)
+    const newURL = new URL(endpoint)
+    newURL.search = new URLSearchParams(url.search)
   try {
-    return handleIngressAPIRaw(event, endpoint)
+    return handleIngressAPIRaw(event, newURL)
   } catch (e) {
     return createErrorResponse(e.message)
   }
