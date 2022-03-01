@@ -1,8 +1,8 @@
-// AUTO-GENERATED FILE. ANY CHANGES WILL BE OVERRIDEN
+// AUTO-GENERATED FILE. ANY CHANGES WILL BE OVERWRITTEN
 
-const ROUTE = '/abcd1234';
-const PATH_FOR_SCRIPT_DOWNLOAD = '/ghjklmno56789';
-const PATH_FOR_GET_ENDPOINT = '/qwerty13579';
+const ROUTE = '/abcd1234'; // todo use Worker KV maybe?
+const PATH_FOR_SCRIPT_DOWNLOAD = '/ghjklmno56789';  // todo use Worker KV maybe?
+const PATH_FOR_GET_ENDPOINT = '/qwerty13579';  // todo use Worker KV maybe?
 
 function getVisitorIdEndpoint(region) {
   const prefix = region === 'us' ? '' : `${region}.`;
@@ -10,9 +10,9 @@ function getVisitorIdEndpoint(region) {
 }
 
 function createCookieStringFromObject(name, value) {
-  const filtered = Object.entries(value).filter(([k]) => k !== 'name' && k !== 'value');
+  const flags = Object.entries(value).filter(([k]) => k !== name && k !== 'value');
   const nameValue = `${name}=${value.value}`;
-  const rest = filtered.map(([k,v]) => `${k}=${v}`);
+  const rest = flags.map(([k,v]) => v ? `${k}=${v}` : k);
   return [nameValue, ...rest].join('; ');
 }
 
@@ -25,7 +25,7 @@ function createResponse(request, response) {
   newHeaders.delete('set-cookie')
   for (const cookieValue of cookiesArray) {
       let cookieName;
-      const cookieObject = cookieValue.split(';').reduce((prev, flag, index) => {
+      const cookieObject = cookieValue.split('; ').reduce((prev, flag, index) => {
           let [key, value] = flag.split('=');
           if (index === 0) {
               cookieName = key;
@@ -33,7 +33,7 @@ function createResponse(request, response) {
           }
           return {...prev, [key]: value}
       }, {})
-      cookieObject.domain = domain; // first party instead of third
+      cookieObject.Domain = domain; // first party cookie instead of third party cookie
       const newCookie = createCookieStringFromObject(cookieName, cookieObject);
       newHeaders.append('set-cookie', newCookie);
   }
