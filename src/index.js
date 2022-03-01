@@ -114,8 +114,8 @@ async function handleDownloadScript(event){
   if (!browserToken) {
     throw new Error('browserToken is expected in query parameters.');
   }
-  const url = `https://fpcdn.io/v3/${browserToken}`; // todo get version from js client
-  const newRequest = new Request(url, new Request(event.request, {
+  const cdnEndpoint = `https://fpcdn.io/v3/${browserToken}`; // todo get version, loader version from js client and set in the endpoint
+  const newRequest = new Request(cdnEndpoint, new Request(event.request, {
     headers: new Headers(event.request.headers)
   }))
 
