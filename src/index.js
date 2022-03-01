@@ -18,6 +18,7 @@ function createCookieStringFromObject(name, value) {
 
 function createResponse(request, response) {
   const origin = request.headers.get('origin')
+  console.log({origin})
   // const domain = psl.get((new URL(origin)).hostname) || undefined
   const domain = (new URL(origin)).hostname
   const newHeaders = new Headers(response.headers)
@@ -128,10 +129,11 @@ async function handleDownloadScript(event){
 }
 
 async function handleIngressAPI(event){
+    const url = new URL(event.request.url);
     const region = url.searchParams.get('region') || 'us';
     const endpoint = getVisitorIdEndpoint(region)
   try {
-    return handleRequestRaw(event.request, endpoint)
+    return handleRequestRaw(event, endpoint)
   } catch (e) {
     return createErrorResponse(e.message)
   }
@@ -139,6 +141,7 @@ async function handleIngressAPI(event){
 
 export async function handleRequest(event) {
   const url = new URL(event.request.url);
+  console.log({url})
   const pathname = url.pathname;
   if (pathname === `${ROUTE}${PATH_FOR_SCRIPT_DOWNLOAD}`) {
     return handleDownloadScript(event);
