@@ -18,13 +18,11 @@ function createCookieStringFromObject(name, value) {
 
 function createResponse(request, response) {
   const origin = request.headers.get('origin')
-  console.log({origin})
   // const domain = psl.get((new URL(origin)).hostname) || undefined
   const domain = (new URL(origin)).hostname
   const newHeaders = new Headers(response.headers)
   console.log({get: newHeaders.get('set-cookie')})
   console.log({getAll: newHeaders.getAll('set-cookie')})
-  console.log({domain})
   // todo make cookie first party
   const newResponse = new Response(response.body, {
     status: response.status,
@@ -35,7 +33,15 @@ function createResponse(request, response) {
   return newResponse
 }
 
-async function handleRequestRaw(event, endpoint) {
+function createErrorResponse(reason) {
+  const responseBody = {
+    message: 'An error occurred with Cloudflare worker.',
+    reason,
+  }
+  return new Response(JSON.stringify(responseBody), { status: 500 })
+}
+
+async function handleIngressAPIRaw(event, endpoint) {
   if (event == null) {
     throw new Error('event is null');
   }
@@ -48,18 +54,15 @@ async function handleRequestRaw(event, endpoint) {
     throw new Error('endpoint is null');
   }
 
-  const newRequest = new Request(endpoint, new Request(event.request))
+  const requestHeaders = new Headers(event.request)
+  requestHeaders.set('user-agent', event.request.get('user-agent'))
+
+  const newRequest = new Request(endpoint, new Request(event.request, {
+    headers: requestHeaders
+  }))
 
   const response = await fetch(newRequest)
   return createResponse(event.request, response)
-}
-
-function createErrorResponse(reason) {
-  const responseBody = {
-    message: 'An error occurred with Cloudflare worker.',
-    reason,
-  }
-  return new Response(JSON.stringify(responseBody), { status: 500 })
 }
 
 async function fetchCacheable(event, request) {
@@ -133,7 +136,7 @@ async function handleIngressAPI(event){
     const region = url.searchParams.get('region') || 'us';
     const endpoint = getVisitorIdEndpoint(region)
   try {
-    return handleRequestRaw(event, endpoint)
+    return handleIngressAPIRaw(event, endpoint)
   } catch (e) {
     return createErrorResponse(e.message)
   }
