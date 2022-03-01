@@ -1,7 +1,13 @@
-const ROUTE = '/xyzabcd1234';
+// AUTO-GENERATED FILE. ANY CHANGES WILL BE OVERRIDEN
+
+const ROUTE = '/abcd1234';
 const PATH_FOR_SCRIPT_DOWNLOAD = '/ghjklmno56789';
 const PATH_FOR_GET_ENDPOINT = '/qwerty13579';
-const BROWSER_TOKEN = 'ztukooZ3oRmG8FgOXMva';
+
+function getVisitorIdEndpoint(region) {
+  const prefix = region === 'us' ? '' : `${region}.`;
+  return `https://${prefix}api.fpjs.io`;
+}
 
 function createCookieStringFromObject(name, value) {
   const filtered = Object.entries(value).filter(([k]) => k !== 'name' && k !== 'value');
@@ -11,22 +17,19 @@ function createCookieStringFromObject(name, value) {
 }
 
 function createResponse(request, response) {
-  console.log({setCookie: response.headers.get('set-cookie')})
   const origin = request.headers.get('origin')
-  const domain = 'necipallef.com'// psl.get((new URL(origin)).hostname) || undefined
+  // const domain = psl.get((new URL(origin)).hostname) || undefined
+  const domain = (new URL(origin)).hostname
+  const newHeaders = new Headers(response.headers)
+  console.log({get: newHeaders.get('set-cookie')})
+  console.log({getAll: newHeaders.getAll('set-cookie')})
+  console.log({domain})
+  // todo make cookie first party
   const newResponse = new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
-    headers: new Headers(response.headers),
+    headers: newHeaders,
   })
-  // Fixme parse function for multiple set-cookie. Try getAll. Check here https://developers.cloudflare.com/workers/runtime-apis/headers#differences
-  // const cookies = parse(response, { map: true })
-  // newResponse.headers.delete('set-cookie')
-  // for (const [name, value] of Object.entries(cookies)) {
-  //   value.domain = domain
-  //   const cookiesValue = createCookieStringFromObject(name, value)
-  //   newResponse.headers.append('set-cookie', cookiesValue)
-  // }
 
   return newResponse
 }
@@ -82,28 +85,12 @@ async function fetchCacheable(event, request) {
 }
 
 async function handleDownloadScript(event){
-  // const url = `https://fpcdn.io/v3/${BROWSER_TOKEN}`;
-  // const url = `https://fpcdn.io`;
-  // const url = `https://fingerprintjs.com`;
-  // const url = `https://fpjs-api.necipallef.com/cache-test.js`;
-  // const url = `http://fpjs-api.necipallef.com/cache-test.js`;
-  const url = `http://necipallef.xyz/cache-test.js`;
-  // const url = `http://necipallef.xyz/noExtension`;
-  // const url = `http://necipallef.xyz/get-worker-header`;
-  // const url = `https://api.fpjs.pro/subscriptions`;
-  // const url = `https://musterix.bantastr.com/api/companies/1`;
+  const browserToken = 'abcd1234' // todo
+  const url = `https://fpcdn.io/v3/${browserToken}`;
   const newRequest = new Request(url, new Request(event.request, {
     headers: new Headers(event.request.headers)
   }))
-  for (const [key, value] of Object.entries(newRequest.headers)) {
-    if (key === 'x-forwarded-for' || key === 'cf-connecting-ip') {
-      console.log(`${key}:${value}`)
-    }
-  }
-  // return fetch(`https://fpcdn.io/v3/${BROWSER_TOKEN}`)
-  // return fetch(newRequest)
-  // return fetch(url)
-  // return fetch(newRequest, {cf: {cacheTtl: 3 * 60 * 60}})
+
   return fetchCacheable(event, newRequest)
     .then(res => {
       console.log('PRINTING RES HEADERS BEGIN')
@@ -140,19 +127,23 @@ async function handleDownloadScript(event){
   // return new Response('response from CF Worker')
 }
 
+async function handleIngressAPI(event){
+    const region = url.searchParams.get('region') || 'us';
+    const endpoint = getVisitorIdEndpoint(region)
+  try {
+    return handleRequestRaw(event.request, endpoint)
+  } catch (e) {
+    return createErrorResponse(e.message)
+  }
+}
+
 export async function handleRequest(event) {
   const url = new URL(event.request.url);
   const pathname = url.pathname;
   if (pathname === `${ROUTE}${PATH_FOR_SCRIPT_DOWNLOAD}`) {
     return handleDownloadScript(event);
   } else if (pathname === `${ROUTE}${PATH_FOR_GET_ENDPOINT}`) {
-    try {
-      // const endpoint = url.searchParams.get('endpoint');
-      const endpoint = 'https://api.fpjs.io/?ci=js/3.5.4'
-      return handleRequestRaw(event.request, endpoint)
-    } catch (e) {
-      return createErrorResponse(e.message)
-    }
+    return handleIngressAPI(event)
   } else {
     return createErrorResponse(`unmatched path ${pathname}`)
   }
