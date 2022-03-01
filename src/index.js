@@ -21,9 +21,22 @@ function createResponse(request, response) {
   // const domain = psl.get((new URL(origin)).hostname) || undefined
   const domain = (new URL(origin)).hostname
   const newHeaders = new Headers(response.headers)
-  console.log({get: newHeaders.get('set-cookie')})
-  console.log({getAll: newHeaders.getAll('set-cookie')})
-  // todo make cookie first party
+  const cookiesArray = newHeaders.getAll('set-cookie');
+  newHeaders.delete('set-cookie')
+  for (const cookieValue of cookiesArray) {
+      let cookieName;
+      const cookieObject = cookieValue.split(';').reduce((prev, flag, index) => {
+          let [key, value] = flag.split('=');
+          if (index === 0) {
+              cookieName = key;
+              key = 'value';
+          }
+          return {...prev, [key]: value}
+      }, {})
+      cookieObject.domain = domain; // first party instead of third
+      const newCookie = createCookieStringFromObject(cookieName, cookieObject);
+      newHeaders.append('set-cookie', newCookie);
+  }
   const newResponse = new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
