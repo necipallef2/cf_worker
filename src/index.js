@@ -57,7 +57,7 @@ function createErrorResponse(reason) {
     message: 'An error occurred with Cloudflare worker.',
     reason,
   }
-  return new Response(JSON.stringify(responseBody), { status: 500 })
+  return new Response(JSON.stringify(responseBody), { status: 500 }) // todo standard error for js client
 }
 
 async function handleIngressAPIRaw(event, url) {
@@ -85,7 +85,8 @@ async function handleIngressAPIRaw(event, url) {
 }
 
 async function fetchCacheable(event, request) {
-  return fetch(request, {cf: {cacheTtl: 5 * 60}});
+  return fetch(request); // todo cache
+  // return fetch(request, {cf: {cacheTtl: 5 * 60}});
   const cacheURL = new URL(request.url);
 
   const cacheKey = new Request(cacheURL.toString(), request);
@@ -108,25 +109,29 @@ async function fetchCacheable(event, request) {
 }
 
 async function handleDownloadScript(event){
-  const browserToken = 'abcd1234' // todo
-  const url = `https://fpcdn.io/v3/${browserToken}`;
+  const url = new URL(event.request.url);
+  const browserToken = url.searchParams.get('browserToken');
+  if (!browserToken) {
+    throw new Error('browserToken is expected in query parameters.');
+  }
+  const url = `https://fpcdn.io/v3/${browserToken}`; // todo get version from js client
   const newRequest = new Request(url, new Request(event.request, {
     headers: new Headers(event.request.headers)
   }))
 
   return fetchCacheable(event, newRequest)
-    .then(res => {
-      console.log('PRINTING RES HEADERS BEGIN')
-      let message = '';
-      for (const [key, value] of res.headers) {
-        message += `${key}:${value}    `
-        // console.log({key, value});
-      }
-      console.log(message)
-      console.log('PRINTING RES HEADERS END')
+    // .then(res => {
+    //   console.log('PRINTING RES HEADERS BEGIN')
+    //   let message = '';
+    //   for (const [key, value] of res.headers) {
+    //     message += `${key}:${value}    `
+    //     // console.log({key, value});
+    //   }
+    //   console.log(message)
+    //   console.log('PRINTING RES HEADERS END')
 
-      return res;
-    })
+    //   return res;
+    // })
   // .then(res => {
   //   const response = new Response(res.body, res)
   //   const cacheControlDirectives = res.headers.get('cache-control').split(',')
@@ -151,16 +156,12 @@ async function handleDownloadScript(event){
 }
 
 async function handleIngressAPI(event){
-    const url = new URL(event.request.url);
-    const region = url.searchParams.get('region') || 'us';
-    const endpoint = getVisitorIdEndpoint(region)
-    const newURL = new URL(endpoint)
-    newURL.search = new URLSearchParams(url.search)
-  try {
-    return handleIngressAPIRaw(event, newURL)
-  } catch (e) {
-    return createErrorResponse(e.message)
-  }
+  const url = new URL(event.request.url);
+  const region = url.searchParams.get('region') || 'us';
+  const endpoint = getVisitorIdEndpoint(region)
+  const newURL = new URL(endpoint)
+  newURL.search = new URLSearchParams(url.search)
+  return handleIngressAPIRaw(event, newURL)
 }
 
 export async function handleRequest(event) {
@@ -171,12 +172,16 @@ export async function handleRequest(event) {
   } else if (pathname === `${ROUTE}${PATH_FOR_GET_ENDPOINT}`) {
     return handleIngressAPI(event)
   } else {
-    return createErrorResponse(`unmatched path ${pathname}`)
+    throw new Error(`unmatched path ${pathname}`);
   }
 }
 
 export default {
   async fetch(request){
-    return handleRequest({request})
+    try {
+      return handleRequest({request})
+    } catch (e) {
+      return createErrorResponse(`unmatched path ${pathname}`)
+    }
   }
 }
