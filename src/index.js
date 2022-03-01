@@ -55,7 +55,7 @@ async function handleIngressAPIRaw(event, endpoint) {
   }
 
   const requestHeaders = new Headers(event.request)
-  requestHeaders.set('user-agent', event.request.get('user-agent'))
+  requestHeaders.set('user-agent', event.request.headers.get('user-agent'))
 
   const newRequest = new Request(endpoint, new Request(event.request, {
     headers: requestHeaders
