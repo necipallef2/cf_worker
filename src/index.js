@@ -24,13 +24,13 @@ function createCookieStringFromObject(name, value) {
 
 function createResponseWithMaxAge(oldResponse, maxMaxAge) {
   const response = new Response(oldResponse.body, oldResponse)
-  const cacheControlDirectives = oldResponse.headers.get('cache-control').split(',')
-  for (const directive of cacheControlDirectives) {
-    const [key, value] = directive.split('=')
-    if (key.trim().toLowerCase() === 'max-age') {
-      directive[1] = Math.min(maxMaxAge, Number(value))
-      break
-    }
+  const cacheControlDirectives = oldResponse.headers.get('cache-control').split(', ')
+  const maxAgeIndex = cacheControlDirectives.findIndex(directive => directive.split('=')[0].trim().toLowerCase() === 'max-age')
+  if (maxAgeIndex === -1) {
+    cacheControlDirectives.push(`max-age=${maxMaxAge}`)
+  } else {
+    const oldMaxAge = Number(cacheControlDirectives[maxAgeIndex].split('=')[1])
+    cacheControlDirectives[maxAgeIndex] = `max-age=${Math.min(maxMaxAge, oldMaxAge)}`
   }
   const cacheControlValue = cacheControlDirectives.join(', ')
   response.headers.set('cache-control', cacheControlValue)
