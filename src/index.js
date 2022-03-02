@@ -22,7 +22,22 @@ function createCookieStringFromObject(name, value) {
   return [nameValue, ...rest].join('; ');
 }
 
-function createResponse(request, response) {
+function createResponseWithMaxAge(oldResponse, maxMaxAge) {
+  const response = new Response(oldResponse.body, oldResponse)
+  const cacheControlDirectives = oldResponse.headers.get('cache-control').split(',')
+  for (const directive of cacheControlDirectives) {
+    const [key, value] = directive.split('=')
+    if (key.trim().toLowerCase() === 'max-age') {
+      directive[1] = Math.min(maxMaxAge, Number(value))
+      break
+    }
+  }
+  const cacheControlValue = cacheControlDirectives.join(', ')
+  response.headers.set('cache-control', cacheControlValue)
+  return response
+}
+
+function createResponseWithFirstPartyCookies(request, response) {
   const origin = request.headers.get('origin');
   const domainURL = (new URL(origin)).hostname;
   const domain = psl.get(domainURL) || domainURL;
@@ -81,31 +96,11 @@ async function handleIngressAPIRaw(event, url) {
   }));
 
   const response = await fetch(newRequest)
-  return createResponse(event.request, response)
+  return createResponseWithFirstPartyCookies(event.request, response)
 }
 
-async function fetchCacheable(event, request) {
-  return fetch(request); // todo cache
-  // return fetch(request, {cf: {cacheTtl: 5 * 60}});
-  const cacheURL = new URL(request.url);
-
-  const cacheKey = new Request(cacheURL.toString(), request);
-  const cache = caches.default;
-
-  let response = await cache.match(cacheKey)
-  if (!response) {
-    console.log(`Response for request url: ${request.url} not present in cache. Fetching and caching request.`);
-    response = await fetch(request)
-    response = new Response(response.body, response)
-    console.log(`cache control header before: ${response.headers.get('cache-control')}`)
-    response.headers.append('Cache-Control', 's-maxage=10')
-    console.log(`cache control header after: ${response.headers.get('cache-control')}`)
-    event.waitUntil(cache.put(cacheKey, response.clone()))
-  } else {
-    console.log(`Cache hit for: ${request.url}`)
-  }
-
-  return response
+async function fetchCacheable(event, request, ttl) {
+  return fetch(request, {cf: {cacheTtl: ttl}});
 }
 
 async function handleDownloadScript(event){
@@ -117,9 +112,12 @@ async function handleDownloadScript(event){
   const cdnEndpoint = `https://fpcdn.io/v3/${browserToken}`; // todo get version, loader version from js client and set in the endpoint
   const newRequest = new Request(cdnEndpoint, new Request(event.request, {
     headers: new Headers(event.request.headers)
-  }))
+  }));
 
-  return fetchCacheable(event, newRequest)
+  console.log(`Downloading script from cdnEndpoint ${cdnEndpoint}...`);
+  const downloadScriptCacheTtl = 5 * 60;
+
+  return fetchCacheable(event, newRequest, downloadScriptCacheTtl)
     // .then(res => {
     //   console.log('PRINTING RES HEADERS BEGIN')
     //   let message = '';
@@ -132,27 +130,7 @@ async function handleDownloadScript(event){
 
     //   return res;
     // })
-  // .then(res => {
-  //   const response = new Response(res.body, res)
-  //   const cacheControlDirectives = res.headers.get('cache-control').split(',')
-  //   const defaultMaxAge = 60 * 60
-  //   for (const directive of cacheControlDirectives) {
-  //     const [key, value] = directive.split('=')
-  //     if (key.trim().toLowerCase() === 'max-age') {
-  //       directive[1] = Math.min(defaultMaxAge, Number(value))
-  //       break
-  //     }
-  //   }
-  //   const cacheControlValue = cacheControlDirectives.join(', ')
-  //   response.headers.set('cache-control', cacheControlValue)
-  //   return response
-  // })
-  //   .then(res => {
-  //     console.log({ res })
-  //     // res.json().then((t) => console.log({ t }))
-  //   })
-  //   .catch(err => console.log({err}))
-  // return new Response('response from CF Worker')
+    .then(res => createResponseWithMaxAge(res, 60 * 60))
 }
 
 async function handleIngressAPI(event){
