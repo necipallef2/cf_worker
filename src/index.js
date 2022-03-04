@@ -67,10 +67,10 @@ function createResponseWithFirstPartyCookies(request, response) {
   return newResponse
 }
 
-function createErrorResponse(reason) { // todo should take exception instance
+function createErrorResponse(e) {
   const responseBody = {
     message: 'An error occurred with Cloudflare worker.',
-    reason,
+    reason: e.message,
   }
   return new Response(JSON.stringify(responseBody), { status: 500 }) // todo standard error for js client
 }
@@ -159,7 +159,7 @@ export default {
     try {
       return handleRequest({request})
     } catch (e) {
-      return createErrorResponse(`unmatched path ${pathname}`) // todo message not correct
+      return createErrorResponse(e)
     }
   }
 }
