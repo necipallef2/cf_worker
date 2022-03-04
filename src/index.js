@@ -105,11 +105,11 @@ async function fetchCacheable(event, request, ttl) {
 
 async function handleDownloadScript(event){
   const url = new URL(event.request.url);
-  const browserToken = url.searchParams.get('browserToken');
-  if (!browserToken) {
-    throw new Error('browserToken is expected in query parameters.');
+  const subscriptionApiKey = url.searchParams.get('subscriptionApiKey');
+  if (!subscriptionApiKey) {
+    throw new Error('subscriptionApiKey is expected in query parameters.');
   }
-  const cdnEndpoint = `https://fpcdn.io/v3/${browserToken}`; // todo get version, loader version from js client and set in the endpoint
+  const cdnEndpoint = `https://fpcdn.io/v3/${subscriptionApiKey}`; // todo get version, loader version from js client and set in the endpoint
   const newRequest = new Request(cdnEndpoint, new Request(event.request, {
     headers: new Headers(event.request.headers)
   }));
