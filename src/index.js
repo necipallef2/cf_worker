@@ -67,7 +67,7 @@ function createResponseWithFirstPartyCookies(request, response) {
   return newResponse
 }
 
-function createErrorResponse(reason) {
+function createErrorResponse(reason) { // todo should take exception instance
   const responseBody = {
     message: 'An error occurred with Cloudflare worker.',
     reason,
@@ -105,11 +105,11 @@ async function fetchCacheable(event, request, ttl) {
 
 async function handleDownloadScript(event){
   const url = new URL(event.request.url);
-  const subscriptionApiKey = url.searchParams.get('subscriptionApiKey');
-  if (!subscriptionApiKey) {
-    throw new Error('subscriptionApiKey is expected in query parameters.');
+  const publicApiKey = url.searchParams.get('publicApiKey');
+  if (!publicApiKey) {
+    throw new Error('publicApiKey is expected in query parameters.');
   }
-  const cdnEndpoint = `https://fpcdn.io/v3/${subscriptionApiKey}`; // todo get version, loader version from js client and set in the endpoint
+  const cdnEndpoint = `https://fpcdn.io/v3/${publicApiKey}`; // todo get version, loader version from js client and set in the endpoint
   const newRequest = new Request(cdnEndpoint, new Request(event.request, {
     headers: new Headers(event.request.headers)
   }));
@@ -159,7 +159,7 @@ export default {
     try {
       return handleRequest({request})
     } catch (e) {
-      return createErrorResponse(`unmatched path ${pathname}`)
+      return createErrorResponse(`unmatched path ${pathname}`) // todo message not correct
     }
   }
 }
