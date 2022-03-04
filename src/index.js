@@ -105,9 +105,10 @@ async function fetchCacheable(event, request, ttl) {
 
 async function handleDownloadScript(event){
   const url = new URL(event.request.url);
-  const publicApiKey = url.searchParams.get('publicApiKey');
+  const publicApiKey = url.searchParams.get('publicApiKey') || '';
   if (!publicApiKey) {
-    throw new Error('publicApiKey is expected in query parameters.');
+    // Here it is decided to not throw error and let PRO CDN handle this case.
+    // throw new Error('publicApiKey is expected in query parameters.');
   }
   const cdnEndpoint = `https://fpcdn.io/v3/${publicApiKey}`; // todo get version, loader version from js client and set in the endpoint
   const newRequest = new Request(cdnEndpoint, new Request(event.request, {
@@ -118,18 +119,6 @@ async function handleDownloadScript(event){
   const downloadScriptCacheTtl = 5 * 60;
 
   return fetchCacheable(event, newRequest, downloadScriptCacheTtl)
-    // .then(res => {
-    //   console.log('PRINTING RES HEADERS BEGIN')
-    //   let message = '';
-    //   for (const [key, value] of res.headers) {
-    //     message += `${key}:${value}    `
-    //     // console.log({key, value});
-    //   }
-    //   console.log(message)
-    //   console.log('PRINTING RES HEADERS END')
-
-    //   return res;
-    // })
     .then(res => createResponseWithMaxAge(res, 60 * 60))
 }
 
@@ -157,7 +146,7 @@ export async function handleRequest(event) {
 export default {
   async fetch(request){
     try {
-      return handleRequest({request})
+      return await handleRequest({request})
     } catch (e) {
       return createErrorResponse(e)
     }
